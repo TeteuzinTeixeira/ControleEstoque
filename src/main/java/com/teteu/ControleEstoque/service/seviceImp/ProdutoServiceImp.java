@@ -1,10 +1,12 @@
 package com.teteu.ControleEstoque.service.seviceImp;
 
+import com.teteu.ControleEstoque.exception.InvalidProductException;
 import com.teteu.ControleEstoque.dto.IdDto;
 import com.teteu.ControleEstoque.dto.ProdutoDtoResponse;
 import com.teteu.ControleEstoque.dto.ProdutoDtoSaveRequest;
 import com.teteu.ControleEstoque.dto.ProdutoDtoUpdateRequest;
 import com.teteu.ControleEstoque.entity.Produto;
+import com.teteu.ControleEstoque.exception.ProductNotFoundException;
 import com.teteu.ControleEstoque.mapper.ProdutoMapper;
 import com.teteu.ControleEstoque.repository.ProdutoRepository;
 import com.teteu.ControleEstoque.service.IProdutoService;
@@ -25,19 +27,15 @@ public class ProdutoServiceImp implements IProdutoService {
 
     @Override
     public Produto salvarProduto(ProdutoDtoSaveRequest dto) {
-        try {
-            if (!validarProduto(dto))
-                throw new RuntimeException("Preencha todos os campos");
-            Produto produto = mapper.produtoDtoSaveToEntity(dto);
-            Produto produtoValidado = validaProdutoIgual(dto);
-            if (produtoValidado == null)
-                return produtoRepository.save(produto);
-            produtoValidado.setQuantidade(produtoValidado.getQuantidade() + dto.getQuantidade());
-            produtoValidado.setDataAtualizacao(LocalDateTime.now());
-            return produtoRepository.save(produtoValidado);
-        } catch (RuntimeException exception) {
-            throw new RuntimeException(exception);
-        }
+        if (!validarProduto(dto))
+            throw new InvalidProductException("Preencha todos os campos");
+        Produto produto = mapper.produtoDtoSaveToEntity(dto);
+        Produto produtoValidado = validaProdutoIgual(dto);
+        if (produtoValidado == null)
+            return produtoRepository.save(produto);
+        produtoValidado.setQuantidade(produtoValidado.getQuantidade() + dto.getQuantidade());
+        produtoValidado.setDataAtualizacao(LocalDateTime.now());
+        return produtoRepository.save(produtoValidado);
     }
 
     @Override
@@ -48,7 +46,7 @@ public class ProdutoServiceImp implements IProdutoService {
     @Override
     public Produto buscarProduto(String id) {
         return produtoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new ProductNotFoundException("Produto não encontrado"));
     }
 
     @Override
@@ -62,20 +60,16 @@ public class ProdutoServiceImp implements IProdutoService {
 
     @Override
     public ProdutoDtoResponse atualizarProduto(ProdutoDtoUpdateRequest produtoAtualizado) {
-        try {
-            if (!validarProdutoUpdate(produtoAtualizado))
-                throw new RuntimeException("Preencha todos os campos");
-            Optional<Produto> optionalProduto = produtoRepository.findById(produtoAtualizado.getId());
-            if (optionalProduto.isPresent()) {
-                Produto produtoDb = optionalProduto.get();
-                produtoDb = atualizarProdutoMapper(produtoAtualizado, produtoDb);
-                produtoRepository.save(produtoDb);
-                return mapper.toDtoUpdateReponse(produtoDb);
-            } else {
-                throw new RuntimeException("Produto não encontrado");
-            }
-        } catch (RuntimeException exception) {
-            throw new RuntimeException(exception);
+        if (!validarProdutoUpdate(produtoAtualizado))
+            throw new InvalidProductException("Preencha todos os campos");
+        Optional<Produto> optionalProduto = produtoRepository.findById(produtoAtualizado.getId());
+        if (optionalProduto.isPresent()) {
+            Produto produtoDb = optionalProduto.get();
+            produtoDb = atualizarProdutoMapper(produtoAtualizado, produtoDb);
+            produtoRepository.save(produtoDb);
+            return mapper.toDtoUpdateReponse(produtoDb);
+        } else {
+            throw new ProductNotFoundException("Produto não encontrado");
         }
     }
 
@@ -83,7 +77,7 @@ public class ProdutoServiceImp implements IProdutoService {
     public void deletarProduto(IdDto id) {
         Optional<Produto> produto = produtoRepository.findById(id.getId());
         if (produto.isEmpty()) {
-            throw new RuntimeException("Produto não encontrado com id: " + id);
+            throw new ProductNotFoundException("Produto não encontrado com id: " + id);
         }
         produtoRepository.deleteById(id.getId());
     }

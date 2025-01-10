@@ -1,4 +1,4 @@
-package com.teteu.ControleEstoque.service.seviceImp;
+package com.teteu.ControleEstoque.service;
 
 import org.springframework.stereotype.Service;
 
